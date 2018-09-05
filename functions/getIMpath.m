@@ -1,4 +1,4 @@
-function [PIX] = ROIZERgetimages()
+function [PIX] = getIMpath()
 
 
 % Open image selection dialogue box

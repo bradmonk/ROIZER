@@ -10,7 +10,7 @@ else
     HAX = axes('Position',[.06 .06 .9 .9],'Color','none','YDir','reverse',...
     'PlotBoxAspectRatio',[1 1 1],'XColor','none','YColor','none'); hold on
     ph1 = imagesc(HAX,IMG(:,:,1));
-    axis tight; colormap bone;
+    axis tight; colormap hot;
 end
 
 HAX = gca;
@@ -38,7 +38,7 @@ ROIarea = pi * (stampSize/2)^2;
 setColor(hROI,[.7 1 .7]);
 
 % uiwait
-idisp(IMG)
+idisp(IMG);
 
 
 %{
@@ -102,11 +102,11 @@ ROI(nROI).TYPE  = 'stamp';
 doagainROI = questdlg('Select next ROI?', 'Select next ROI?', 'Yes', 'No', 'No');
 switch doagainROI
    case 'Yes'
-        clickROI(IMG,ROI)
+        clickROI(IMG,ROI);
    case 'No'
         %return
 end
-set(gcf,'Pointer','arrow')
+set(gcf,'Pointer','arrow');
 
 
 

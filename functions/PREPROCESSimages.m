@@ -19,8 +19,8 @@ IMG(IMG > q(2)) = q(2);
 [BND.qhi,BND.qlo] = bounds(IMG(:));
 
 
-% Make sure the image data is scaled from 0:255 (legend one-liner!)
-IMG = uint8(rescale(IMG).*255);
+% % Make sure the image data is scaled from 0:255 (legend one-liner!)
+% IMG = uint8(rescale(IMG).*255);
 
 
 % Recheck high-low bounds of pixel data
