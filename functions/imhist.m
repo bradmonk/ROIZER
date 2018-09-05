@@ -2,9 +2,9 @@ function [THRESH] = imhist(IMG, PC)
 
 
 
-IM = PC(1).imc;
+IM = PC;
 
-I = IM(:,:,1:16);
+I = IM;
 I = mean(I,3);
 % I = IM(:,:,1);
 
@@ -35,7 +35,7 @@ IM(IM<q(2)) = 0;
 IM = rescale(IM,-.02,1);
 IM(IM<q(2)) = 0;
 
-I = IM(:,:,1:8);
+I = IM;
 I = mean(I,3);
 q = quantile(I(:),[.001 .999]);
 
