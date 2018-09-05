@@ -5,6 +5,7 @@
 %                                                              |
 %###############################################################
 %###############################################################
+clc; close all; clear;
 
 P.home = pwd;
 if ~any(regexp(P.home,'ROIZER') > 0)
@@ -225,10 +226,12 @@ clearvars -except PIX IMG SMIM PC ABIM PCI
 
 
 %###############################################################
-%%      GET MEAN MAX PROJECTION OF RAW IMAGE
+%%      GET MEAN MAX-MIN PROJECTION OF RAW IMAGE
 %###############################################################
+%{
 
-
+% GET MEAN_MAX INTENSITY PROJECTION IMG
+%------------------------------------------
 maxI = zeros(size(IMG,1),size(IMG,2),2);
 
 j=1;
@@ -240,17 +243,76 @@ j=j+1;
 end
 
 
-IMAX = rescale(mean(maxI,3));
+MAXI = maxI;
 
 
 
-close all; imagesc(IMAX); colormap hot; 
+close all; imagesc(MAXI(:,:,1)); colormap hot; 
 title('AVERAGE MAX PIXEL INTENSITY OF RAW IMAGE STACK')
 pause(2)
 
 
 
+
+
+
+% GET MEAN_MIN INTENSITY PROJECTION IMG
+%------------------------------------------
+minI = zeros(size(IMG,1),size(IMG,2),2);
+
+j=1;
+for i = 1:10:(size(IMG,3)-10)
+
+    minI(:,:,j) = (min(IMG(:,:,i:(i+9)),[],3));
+
+j=j+1;
+end
+
+
+MINI = minI;
+
+
+
+close all; imagesc(MINI(:,:,1)); colormap hot; 
+title('AVERAGE MIN PIXEL INTENSITY OF RAW IMAGE STACK')
+pause(2)
+
+
+
+% GET MAX - MIN INTENSITY PROJECTION IMG
+%------------------------------------------
+
+IMAX = max(MAXI - MINI,[],3);
+
+
+
+close all; imagesc(IMAX(:,:,1)); colormap hot; 
+title('MAX - MIN PIXEL INTENSITY OF RAW IMAGE STACK')
+pause(2)
+
+
+
 clearvars -except PIX IMG SMIM PC ABIM PCI IMAX
+%}
+
+
+
+% GET MAX DIFF OF RAW IMAGE STACK
+%------------------------------------------
+
+
+IMmin = min(double(IMG),[],3);
+IMmax = max(double(IMG),[],3);
+
+IMAX = IMmax - IMmin;
+
+close all; imagesc(IMAX); colormap hot
+title('AVERAGE PIXEL VARIANCE OF RAW IMAGE STACK')
+pause(2)
+
+
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX
+
 
 
 
@@ -268,6 +330,8 @@ pause(2)
 
 
 clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV
+
+
 
 
 
@@ -393,86 +457,6 @@ clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
 
 
 
-%########################################################################
-%%          HAND-SELECT SOME ROIs AND BACKGROUND
-%########################################################################
-%{
-
-ROX = clickROI(PIC);
-
-clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC ROX
-
-
-
-nROI = size(ROX.mask,2);
-IM = {};
-
-for i = 1:nROI
-
-    msk = ROX.mask{i};
-
-    IM{i} = IMG .* msk;
-
-end
-
-
-ROIM = zeros(size(IM{1}));
-for i = 1:nROI
-
-    ROIM = ROIM + IM{i};
-
-end
-
-viewstack(ROIM,.05)
-
-
-% GET MEAN ACTIVITY IN EACH ROI
-%--------------------------------------------------------
-
-MUJ=[];
-for i = 1:nROI
-
-    msk = ROX.mask{i};
-
-    for j = 1:size(IMG,3)
-
-        IMJ = IMG(:,:,j);
-
-        MUJ(i,j) = mean(IMJ(msk));
-    end
-end
-
-ROIS = MUJ';
-
-minROI = min(ROIS);
-
-ROIS = ROIS - minROI;
-
-ROIS = rescale(ROIS);
-
-
-
-%  PLOT MEAN ACTIVITY IN EACH ROI
-%--------------------------------------------------------
-clc; close all;
-fh1 = figure('Units','pixels','Position',[10 35 1300 500],...
-    'Color','w','MenuBar','none');
-ax1 = axes('Position',[.06 .06 .9 .9],'Color','none');
-ax1.YLim = [0 1]; hold on
-
-ph = plot(ROIS(:,1:3),'k','LineWidth',3);
-pause(1)
-
-for i = 4:size(ROIS,2)
-
-    ph(1).YData = ph(2).YData;
-    ph(2).YData = ph(3).YData;
-    ph(3).YData = ROIS(:,i);
-    ax1.YLim = [0 1];
-    pause(.6)
-
-end
-%}
 
 
 
@@ -491,7 +475,7 @@ clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
 
 % SEGMENT IMAGE
 %--------------------------------------------------------
-[BWMASK,BWRAW] = segIM2(PIX);
+[BWMASK,BWRAW] = segIM2(PIC);
 
 
 close all; p=imagesc(BWMASK); 
@@ -705,7 +689,7 @@ minROI = min(ROIS);
 
 ROIS = ROIS - minROI;
 
-
+ROIS = rescale(ROIS);
 
 
 
@@ -738,6 +722,63 @@ for i = 4:size(ROIS,2)
     pause(.6)
 
 end
+
+
+
+
+
+%########################################################################
+%%  PLOT MEAN ACTIVITY FOR ALL ROIs
+%########################################################################
+
+
+
+clc; close all;
+fh1 = figure('Units','pixels','Position',[10 35 1300 500],...
+    'Color','w','MenuBar','none');
+ax1 = axes('Position',[.06 .06 .9 .9],'Color','none');
+ax1.YLim = [0 1]; hold on
+
+
+
+ph = plot(ROIS,'LineWidth',5);
+pause(1)
+
+
+
+
+clc; close all;
+fh1 = figure('Units','normalized','Position',[.01 .05 .93 .93],...
+    'Color','w','MenuBar','none');
+ax1 = axes('Position',[.06 .06 .9 .9],'Color','none');
+
+n = size(ROIS,2);
+f = size(ROIS,1);
+
+R = ROIS + repmat(1:n,f,1);
+
+ph = plot(R,'LineWidth',3);
+pause(1)
+
+
+
+
+%########################################################################
+%%  EXPORT ROI ACTIVITY TRACES TO SPREADSHEET
+%########################################################################
+
+T = table(ROIS);
+
+
+d = char(datetime('now'));
+d = regexprep(d,':','_');
+d = regexprep(d,' ','_');
+d = regexprep(d,'-','_');
+
+writetable(T,['ROI_ANALYSIS_' d '.csv'])
+
+
+
 
 
 
