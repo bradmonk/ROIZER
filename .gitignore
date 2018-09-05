@@ -4,6 +4,6 @@ archive/*
 *.tif*
 *.png*
 *.jpg*
-*.m*
+*.mat*
 *.psd*
 
