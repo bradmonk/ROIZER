@@ -148,6 +148,7 @@ clearvars -except PIX IMG SMIM PC
 %###############################################################
 %% VIEW FIRST 4 COMPONENTS AFTER GETTING ABSOLUTE VALUE OF MEAN DEVIATION
 %###############################################################
+clc
 
 I = PC(1).imc;
 
@@ -193,7 +194,7 @@ clearvars -except PIX IMG SMIM PC ABIM
 
 
 
-close all
+clc; close all
 
 % pickPCs(PC(1).imc)
 
@@ -475,7 +476,8 @@ clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
 
 % SEGMENT IMAGE
 %--------------------------------------------------------
-[BWMASK,BWRAW] = segIM2(PIC);
+% [BWMASK,BWRAW] = segIM2(PIC);
+[BWMASK,BWRAW] = segIM3(PIC);
 
 
 close all; p=imagesc(BWMASK); 

@@ -19,6 +19,8 @@ q = quantile(I(:),qt);
 
 close all; figure; a=axes;
 
+% keyboard
+
 p = imagesc(I(:,:,1));   a.CLim=q;
 
 for i = 1:size(I,3)

@@ -1,10 +1,13 @@
-function [BW,maskedImage] = segIM2(PIX)
+function [BW,maskedImage] = segIM3(PIX)
+%%
 
-% gaborX = createGaborFeatures(X);
-% % Threshold image - manual threshold
-% BW = X > 9.019600e-02;
+keyboard
 
-% keyboard
+
+%%
+
+gaborX = createGaborFeatures(X);
+
 
 %%
 

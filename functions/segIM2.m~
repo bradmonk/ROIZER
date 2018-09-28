@@ -57,24 +57,24 @@ p.CData=BW; pause(.2)
 
 
 
-
-
-% mask=([0 0 0 0 0 0 0 0 0
-%        0 0 0 0 0 0 0 0 0
-%        0 0 0 1 1 1 0 0 0
-%        0 0 1 1 1 1 1 0 0
-%        0 0 0 1 1 1 0 0 0
-%        0 0 0 0 1 0 0 0 0
-%        0 0 0 0 0 0 0 0 0
-%        0 0 0 0 0 0 0 0 0]);
-% 
-% B = imopen(BW, strel('line', 3, 1));  close all; p=imagesc(B); p.CData=B;
-% B = imopen(B, strel('line', 3, 45));  close all; p=imagesc(B); p.CData=B;
-% B = imopen(B, strel('line', 3, 120));  close all; p=imagesc(B); p.CData=B;
-% B = imopen(B, strel('line', 3, 90));  close all; p=imagesc(B); p.CData=B;
-
-
 %%
+
+mask=([0 0 0 0 0 0 0 0 0
+       0 0 0 0 0 0 0 0 0
+       0 0 0 1 1 1 0 0 0
+       0 0 1 1 1 1 1 0 0
+       0 0 0 1 1 1 0 0 0
+       0 0 0 0 1 0 0 0 0
+       0 0 0 0 0 0 0 0 0
+       0 0 0 0 0 0 0 0 0]);
+
+B = imopen(BW, strel('line', 3, 1));  close all; p=imagesc(B); p.CData=B;
+B = imopen(B, strel('line', 3, 45));  close all; p=imagesc(B); p.CData=B;
+B = imopen(B, strel('line', 3, 120));  close all; p=imagesc(B); p.CData=B;
+B = imopen(B, strel('line', 3, 90));  close all; p=imagesc(B); p.CData=B;
+
+
+
 
 % 0pen mask
 BW = imopen(BW, strel('disk', 1, 4));
