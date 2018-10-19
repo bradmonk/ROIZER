@@ -1,12 +1,12 @@
 function [BW,maskedImage] = segIM3(PIX)
 %%
 
-keyboard
-
-
-%%
-
-gaborX = createGaborFeatures(X);
+% keyboard
+% 
+% 
+% %%
+% 
+% gaborX = createGaborFeatures(X);
 
 
 %%

@@ -962,13 +962,44 @@ writetable(ROITABLE,['ROI_ANALYSIS_' name '.csv'])
 %%      HAND-CLICK TO CHOOSE ROIS TO KEEP
 %###############################################################
 
+
+
 clc; close all
 
+ROS = ROIS;
+ROSn = size(ROS,2);
 
-[AXE] = handpickroi(ROIS);
+
+ROStf   = ROSn >= 16;
+ROSiter = ceil(ROSn/16);
+
+
+AXI = [];
+for ii = 1:ROSiter
+
+    tf = (ROSiter ~= ii);
+
+    if tf
+        [AXE,DONE] = pickROI(ROS);
+        AXE(1) = []; 
+    else
+
+        [AXE,DONE] = pickROI(ROS);
+        AXE(1) = []; 
+    end
+
+
+    AXI = [AXI AXE];
+
+end
+
+
 
 
 disp('CHOSEN ROIs:'); disp(AXE)
+
+
+
 
 
 ROIL = ROIS(:,AXE);
