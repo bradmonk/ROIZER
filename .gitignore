@@ -6,4 +6,5 @@ archive/*
 *.jpg*
 *.mat*
 *.psd*
-
+*.csv*
+*.m~*
