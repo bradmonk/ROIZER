@@ -12,7 +12,7 @@ c = fliplr(linspace(.02,.98,5)); c(1)=[];
 w = .22; h = .22;
 
 
-fh1=figure('Position',[20 35 950 800],'MenuBar','none',...
+fh1=figure('Units','normalized','OuterPosition',[.01 .05 .85 .90],'MenuBar','none',...
     'ButtonDownFcn',@(~,~)disp('pick an axis'),'HitTest','off');
 
 

@@ -8,12 +8,12 @@
 clc; close all; clear;
 
 P.home = pwd;
+P.home = fileparts(which('ROIZER.m'));
+cd(P.home)
 if ~any(regexp(P.home,'ROIZER') > 0)
 disp(['Run this code from the ROIfinder directory; '...
 'your current working directory is instead:'])
 disp(P.home);
-P.home='/Users/bradleymonk/Documents/MATLAB/GIT/ROIZER';
-cd(P.home)
 end
 P.funs  = [P.home filesep 'datasets'];
 P.data  = [P.home filesep 'functions'];
