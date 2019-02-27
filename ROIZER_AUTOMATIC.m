@@ -27,6 +27,8 @@ addpath(join(string(struct2cell(P)),':',1))
 %% SELECT A TIFF STACK AND GET INFO
 %###############################################################
 
+disp('SELECT STACK')
+
 [PIX] = getIMpath();
 
 clearvars -except PIX
