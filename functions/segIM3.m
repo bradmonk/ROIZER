@@ -24,6 +24,7 @@ mu = mean(BW(:)); disp(mu);
 
 
 %---------------TOO LITTLE SIGNAL
+s = 0;
 mu = mean(BW(:)); disp(mu);
 if mu < .01
     for s = 0:.001:1
