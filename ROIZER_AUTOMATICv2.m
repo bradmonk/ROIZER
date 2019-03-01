@@ -8,14 +8,13 @@
 clc; close all; clear;
 
 P.home = pwd;
-P.home = fileparts(which('ROIZER.m'));
+P.home = fileparts(which('ROIZER_AUTOMATICv2.m'));
 cd(P.home)
 if ~any(regexp(P.home,'ROIZER') > 0)
-disp(['Run this code from the ROIfinder directory; '...
+disp(['Run this code from the ROIZER directory; '...
 'your current working directory is instead:'])
 disp(P.home);
 end
-P.funs  = [P.home filesep 'datasets'];
 P.data  = [P.home filesep 'functions'];
 addpath(join(string(struct2cell(P)),':',1))
 
@@ -53,9 +52,9 @@ clearvars -except PIX IMG
 %###############################################################
 
 
-IMG(:,:,1:10) = [];
-
-clearvars -except PIX IMG
+% IMG(:,:,1:10) = [];
+% 
+% clearvars -except PIX IMG
 
 
 
@@ -336,7 +335,7 @@ IMAX = mean(IMAX,3);
 
 
 
-close all; imagesc(IMAX); colormap hot
+close all; imagesc(IMAX); %colormap hot
 title('AVERAGE PIXEL VARIANCE OF RAW IMAGE STACK')
 pause(2)
 
@@ -366,7 +365,7 @@ IMV = mean(IMV,3);
 
 
 
-close all; imagesc(IMV); colormap hot
+close all; imagesc(IMV); %colormap hot
 title('AVERAGE PIXEL VARIANCE OF RAW IMAGE STACK')
 pause(2)
 
@@ -410,7 +409,7 @@ axes(ax04); imagesc(mean(ABIM,3)); title('ABSOLUTE MEAN DEVIATION OF ALL PCs');
 axes(ax05); imagesc(mean(PCI,3));  title('CHOSEN PRINCIPAL COMPONENTS');
 axes(ax06); imagesc(mean(IMV,3));  title('STDEV OF EACH IMG PIXEL ALONG 3RD DIM');
 
-colormap hot
+% colormap hot
 pause(2)
 
 
@@ -504,14 +503,16 @@ clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
 
 
 
-
-
-
+return
 %########################################################################
-%%              PERFORM IMAGE SEGMENTATION
+%%              CELL BODIES OR DENDRITES?
 %########################################################################
-
 clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
+
+
+
+TARGET = questdlg('CELL BODIES OR DENDRITES?', ...
+	'TARGET CELL BODIES OR DENDRITES?','BODY', 'DENDRITES', 'BODY');
 
 
 
@@ -519,21 +520,24 @@ clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
 %--------------------------------------------------------
 AREA_FILTER = [12 , 400];      % <<<<<<<<< USER SHOULD ENTER THIS <<<<<<<<<<
 
-% BOX_FILTER  = [5 5 1/4 1/4]; % <<<<<<<<< USER SHOULD ENTER THIS <<<<<<<<<<
-
-LIST = {'Red';'Green';'Blue'};
- 
-d = dialog('Units','normalized','Position',[.4 .5 .2 .2],'Name','Select One');
-t=sprintf(['         MAKE A SELECTION\n'...
-           'click popup menu even if desired\n'...
-           '  choice is showing by default']);
-txt = uicontrol('Parent',d,...
-       'Style','text',...
-       'Units','normalized',...
-       'Position',[.1 .8 .8 .1],...
-       'String',t);
 
 
+
+
+imagesc(PIC)
+
+
+
+
+
+
+%########################################################################
+%%              PERFORM IMAGE SEGMENTATION
+%########################################################################
+
+
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+TARGET AREA_FILTER
 
 
 
@@ -1038,3 +1042,29 @@ clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
 BWMASK IMFO ROIS ROITABLE ROIL
 
 
+
+
+
+%% NUMBER EACH ROI AND SHOW IMAGE
+%{
+
+
+
+xy = reshape(cell2mat({IMFO.stats.Centroid}),2,[])';
+
+
+close all
+imagesc(IMG(:,:,1) .* BWMASK); hold on;
+scatter(xy(:,1),xy(:,2),'r')
+
+
+for i = 1:size(xy,1)
+
+    text(xy(i,1),xy(i,2),num2str(i)); hold on
+
+
+end
+
+
+
+%}
