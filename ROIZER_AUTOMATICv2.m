@@ -503,7 +503,7 @@ clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
 
 
 
-return
+
 %########################################################################
 %%              CELL BODIES OR DENDRITES?
 %########################################################################
@@ -523,8 +523,7 @@ AREA_FILTER = [12 , 400];      % <<<<<<<<< USER SHOULD ENTER THIS <<<<<<<<<<
 
 
 
-
-imagesc(PIC)
+close all; imagesc(PIC)
 
 
 
