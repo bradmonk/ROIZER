@@ -5,16 +5,16 @@
 %                                                              |
 %###############################################################
 %###############################################################
+clc; close all; clear;
 
 P.home = pwd;
+P.home = fileparts(which('ROIZER.m'));
+cd(P.home)
 if ~any(regexp(P.home,'ROIZER') > 0)
-disp(['Run this code from the ROIfinder directory; '...
+disp(['Run this code from the ROIZER directory; '...
 'your current working directory is instead:'])
 disp(P.home);
-P.home='/Users/bradleymonk/Documents/MATLAB/GIT/ROIZER';
-cd(P.home)
 end
-P.funs  = [P.home filesep 'datasets'];
 P.data  = [P.home filesep 'functions'];
 addpath(join(string(struct2cell(P)),':',1))
 
@@ -25,6 +25,8 @@ addpath(join(string(struct2cell(P)),':',1))
 %###############################################################
 %% SELECT A TIFF STACK AND GET INFO
 %###############################################################
+
+disp('SELECT STACK')
 
 [PIX] = getIMpath();
 
@@ -42,6 +44,17 @@ clearvars -except PIX
 IMG = IMPORTimages(PIX);
 
 clearvars -except PIX IMG
+
+
+
+%###############################################################
+%% TRIM FIRST FEW FRAMES OF IMG STACK
+%###############################################################
+
+
+% IMG(:,:,1:10) = [];
+% 
+% clearvars -except PIX IMG
 
 
 
@@ -147,6 +160,7 @@ clearvars -except PIX IMG SMIM PC
 %###############################################################
 %% VIEW FIRST 4 COMPONENTS AFTER GETTING ABSOLUTE VALUE OF MEAN DEVIATION
 %###############################################################
+clc
 
 I = PC(1).imc;
 
@@ -192,7 +206,7 @@ clearvars -except PIX IMG SMIM PC ABIM
 
 
 
-close all
+clc; close all
 
 % pickPCs(PC(1).imc)
 
@@ -216,7 +230,7 @@ clearvars -except PIX IMG SMIM PC ABIM PCI
 %###############################################################
 
 
-[THRESH] = imhist(IMG, PCI);
+[THRESH] = imhisto(IMG, PCI);
 
 clearvars -except PIX IMG SMIM PC ABIM PCI
 
@@ -225,10 +239,12 @@ clearvars -except PIX IMG SMIM PC ABIM PCI
 
 
 %###############################################################
-%%      GET MEAN MAX PROJECTION OF RAW IMAGE
+%%      GET MEAN MAX-MIN PROJECTION OF RAW IMAGE
 %###############################################################
+%{
 
-
+% GET MEAN_MAX INTENSITY PROJECTION IMG
+%------------------------------------------
 maxI = zeros(size(IMG,1),size(IMG,2),2);
 
 j=1;
@@ -240,17 +256,92 @@ j=j+1;
 end
 
 
-IMAX = rescale(mean(maxI,3));
+MAXI = maxI;
 
 
 
-close all; imagesc(IMAX); colormap hot; 
+close all; imagesc(MAXI(:,:,1)); colormap hot; 
 title('AVERAGE MAX PIXEL INTENSITY OF RAW IMAGE STACK')
 pause(2)
 
 
 
+
+
+
+% GET MEAN_MIN INTENSITY PROJECTION IMG
+%------------------------------------------
+minI = zeros(size(IMG,1),size(IMG,2),2);
+
+j=1;
+for i = 1:10:(size(IMG,3)-10)
+
+    minI(:,:,j) = (min(IMG(:,:,i:(i+9)),[],3));
+
+j=j+1;
+end
+
+
+MINI = minI;
+
+
+
+close all; imagesc(MINI(:,:,1)); colormap hot; 
+title('AVERAGE MIN PIXEL INTENSITY OF RAW IMAGE STACK')
+pause(2)
+
+
+
+% GET MAX - MIN INTENSITY PROJECTION IMG
+%------------------------------------------
+
+IMAX = max(MAXI - MINI,[],3);
+
+
+
+close all; imagesc(IMAX(:,:,1)); colormap hot; 
+title('MAX - MIN PIXEL INTENSITY OF RAW IMAGE STACK')
+pause(2)
+
+
+
 clearvars -except PIX IMG SMIM PC ABIM PCI IMAX
+%}
+
+
+
+% GET MAX DIFF OF RAW IMAGE STACK
+%------------------------------------------
+
+
+% IMmin = min(double(IMG),[],3);
+% IMmax = max(double(IMG),[],3);
+% 
+% IMAX = IMmax - IMmin;
+
+nbins = 20;
+
+sz = size(IMG);
+t = round(linspace(1,sz(3),nbins));
+IM = double(IMG);
+
+IMAX = [];
+for i = 1:numel(t)-1
+    IMmin = min(IM(:,:, t(i):t(i+1) ) ,[],3);
+    IMmax = max(IM(:,:, t(i):t(i+1) ) ,[],3);
+    IMAX(:,:,i) = IMmax - IMmin;
+end
+IMAX = mean(IMAX,3);
+
+
+
+close all; imagesc(IMAX); %colormap hot
+title('AVERAGE PIXEL VARIANCE OF RAW IMAGE STACK')
+pause(2)
+
+
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX
+
 
 
 
@@ -260,14 +351,28 @@ clearvars -except PIX IMG SMIM PC ABIM PCI IMAX
 %###############################################################
 
 
-IMV = std(double(IMG),[],3);
+nbins = 20;
 
-close all; imagesc(IMV); colormap hot
+sz = size(IMG);
+t = round(linspace(1,sz(3),nbins));
+IM = double(IMG);
+
+IMV = [];
+for i = 1:numel(t)-1
+    IMV(:,:,i) = std(IM(:,:, t(i):t(i+1) ) ,[],3);
+end
+IMV = mean(IMV,3);
+
+
+
+close all; imagesc(IMV); %colormap hot
 title('AVERAGE PIXEL VARIANCE OF RAW IMAGE STACK')
 pause(2)
 
 
 clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV
+
+
 
 
 
@@ -304,7 +409,7 @@ axes(ax04); imagesc(mean(ABIM,3)); title('ABSOLUTE MEAN DEVIATION OF ALL PCs');
 axes(ax05); imagesc(mean(PCI,3));  title('CHOSEN PRINCIPAL COMPONENTS');
 axes(ax06); imagesc(mean(IMV,3));  title('STDEV OF EACH IMG PIXEL ALONG 3RD DIM');
 
-colormap hot
+% colormap hot
 pause(2)
 
 
@@ -374,7 +479,7 @@ PIC = rescale(mean(MAGE(:,:,[1 2 3 4 5 6]),3));
 
 
 % ################   SINGLE AXIS ABSOLUTE LOCATION   ################
-close all
+
 fh03 = figure('Units','pixels','Position',[100 35 800 750],...
     'Color','w','MenuBar','none');
 ax31 = axes('Position',[.06 .06 .9 .9],'Color','none');
@@ -393,88 +498,32 @@ clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
 
 
 
+
+
+
+
+
+
 %########################################################################
-%%          HAND-SELECT SOME ROIs AND BACKGROUND
+%%              CELL BODIES OR DENDRITES?
 %########################################################################
-%{
-
-ROX = clickROI(PIC);
-
-clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC ROX
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
 
 
 
-nROI = size(ROX.mask,2);
-IM = {};
-
-for i = 1:nROI
-
-    msk = ROX.mask{i};
-
-    IM{i} = IMG .* msk;
-
-end
+TARGET = questdlg('CELL BODIES OR DENDRITES?', ...
+	'TARGET CELL BODIES OR DENDRITES?','BODY', 'DENDRITES', 'BODY');
 
 
-ROIM = zeros(size(IM{1}));
-for i = 1:nROI
 
-    ROIM = ROIM + IM{i};
-
-end
-
-viewstack(ROIM,.05)
-
-
-% GET MEAN ACTIVITY IN EACH ROI
+% ESTABLISH FILTERING PARAMETERS
 %--------------------------------------------------------
-
-MUJ=[];
-for i = 1:nROI
-
-    msk = ROX.mask{i};
-
-    for j = 1:size(IMG,3)
-
-        IMJ = IMG(:,:,j);
-
-        MUJ(i,j) = mean(IMJ(msk));
-    end
-end
-
-ROIS = MUJ';
-
-minROI = min(ROIS);
-
-ROIS = ROIS - minROI;
-
-ROIS = rescale(ROIS);
+AREA_FILTER = [12 , 400];      % <<<<<<<<< USER SHOULD ENTER THIS <<<<<<<<<<
 
 
 
-%  PLOT MEAN ACTIVITY IN EACH ROI
-%--------------------------------------------------------
-clc; close all;
-fh1 = figure('Units','pixels','Position',[10 35 1300 500],...
-    'Color','w','MenuBar','none');
-ax1 = axes('Position',[.06 .06 .9 .9],'Color','none');
-ax1.YLim = [0 1]; hold on
 
-ph = plot(ROIS(:,1:3),'k','LineWidth',3);
-pause(1)
-
-for i = 4:size(ROIS,2)
-
-    ph(1).YData = ph(2).YData;
-    ph(2).YData = ph(3).YData;
-    ph(3).YData = ROIS(:,i);
-    ax1.YLim = [0 1];
-    pause(.6)
-
-end
-%}
-
-
+close all; imagesc(PIC)
 
 
 
@@ -485,13 +534,16 @@ end
 %%              PERFORM IMAGE SEGMENTATION
 %########################################################################
 
-clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
+
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+TARGET AREA_FILTER
 
 
 
 % SEGMENT IMAGE
 %--------------------------------------------------------
-[BWMASK,BWRAW] = segIM2(PIX);
+% [BWMASK,BWRAW] = segIM2(PIC);
+[BWMASK,BWRAW] = segIM3(PIC);
 
 
 close all; p=imagesc(BWMASK); 
@@ -561,11 +613,11 @@ BBox = [bw',bh' (bw./bh)' (bh./bw)'];
 
 
 
-% ESTABLISH FILTERING PARAMETERS
-%--------------------------------------------------------
-AREA_FILTER = [20 , 400];      % MIN AND MAX ROI AREA
-
-BOX_FILTER  = [5 5 1/4 1/4];   % MIN BOX WIDTH, MAX RATIO OF W/H & H/W
+% % ESTABLISH FILTERING PARAMETERS
+% %--------------------------------------------------------
+% AREA_FILTER = [12 , 400];      % <<<<<<<<< USER SHOULD ENTER THIS <<<<<<<<<<
+% 
+% % BOX_FILTER  = [5 5 1/4 1/4]; % <<<<<<<<< USER SHOULD ENTER THIS <<<<<<<<<<
 
 
 
@@ -578,10 +630,11 @@ TOO.SMALL = AREA_FILTER(1) > Area;
 
 TOO.BIG   = AREA_FILTER(2) < Area;
 
-TOO.BOXY  = sum((BBox < BOX_FILTER),2);
+% TOO.BOXY  = sum((BBox < BOX_FILTER),2);
 
 
-FAIL = TOO.SMALL | TOO.BIG | TOO.BOXY;
+% FAIL = TOO.SMALL | TOO.BIG | TOO.BOXY;
+FAIL = TOO.SMALL | TOO.BIG;
 F = find(FAIL);
 
 
@@ -657,6 +710,8 @@ pause(2)
 
 
 
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+BWMASK IMFO ROIS
 
 
 
@@ -705,12 +760,133 @@ minROI = min(ROIS);
 
 ROIS = ROIS - minROI;
 
+ROIS = rescale(ROIS);
+
+
+
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+BWMASK IMFO ROIS
+
+
+
+
+%% DETERMINE IF ACTIVITY IS SIMPLY RUNUP OR RUNDOWN
+%--------------------------------------------------------
+
+
+nbins = 9;
+
+t = round(linspace(1,size(ROIS,2),nbins));
+
+StartMu = mean(  ROIS( t(2):t(3)         ,:)  );
+EndMu   = mean(  ROIS( t(end-3):t(end-2) ,:)  );
+
+IRUN = StartMu - EndMu;
+IRUNmu = mean(IRUN);
+IRUNsd = std(IRUN);
+
+RAN = (IRUN > (IRUNsd*2 + IRUNmu)) | (IRUN < (IRUNsd*-2 + IRUNmu));
+
+
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+BWMASK IMFO ROIS RAN
 
 
 
 
 
- 
+%% AGAIN REMOVE ROIS THAT DID NOT PASS ALL THRESH TESTS
+%--------------------------------------------------------
+
+ROIS(:,RAN) = [];
+
+F = find(RAN);
+
+BW = IMFO.labs;
+for i = 1:numel(F)
+    BW(BW == F(i)) = 0;
+end
+
+BWMASK = BW > 0;
+
+IMFO.stats = regionprops(BWMASK);
+[IMFO.bi,IMFO.labs,IMFO.n,IMFO.a] = bwboundaries(BWMASK,'noholes');
+
+
+% AGAIN PLOT BOUNDING COORDINATES AROUND ROIs
+%--------------------------------------------------------
+clc; close all
+fh1 = figure('Units','normalized','OuterPosition',[.03 .06 .6 .8],'Color','w');
+ax1 = axes('Position',[.06 .06 .9 .9],'Color','none',...
+            'YDir','reverse','XColor','none','YColor','none'); hold on
+ax2 = axes('Position',[.06 .06 .9 .9],'Color','none'); hold on
+axis(ax1); p=imagesc(BWMASK);p.CData=BWMASK; 
+axis tight; colormap bone; axis(ax2);
+for i = 1:numel(IMFO.stats)
+    scatter(IMFO.bi{i}(:,2),IMFO.bi{i}(:,1),'.');
+    hold on
+end
+pause(2)
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+BWMASK IMFO ROIS
+
+
+
+
+
+
+%% SHOW ROI ACTIVITY AND GET MEAN ACTIVITY IN EACH ROI
+%---------------------------------------------
+
+I = rescale(IMG) .* BWMASK;
+
+q = quantile(I(:),[.0001 .9999]);
+
+close all; figure; a=axes; colormap(bone)
+
+p = imagesc(I(:,:,1));   a.CLim=q;
+
+for i = 1:size(I,3)
+    p.CData = I(:,:,i);  pause(.04)
+end
+
+pause(1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 %%  PLOT MEAN ACTIVITY IN EACH ROI
 %--------------------------------------------------------
 clc; close all;
@@ -740,7 +916,154 @@ for i = 4:size(ROIS,2)
 end
 
 
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+BWMASK IMFO ROIS
+
+
+
+%########################################################################
+%%  PLOT MEAN ACTIVITY FOR ALL ROIs
+%########################################################################
+
+
+clc; close all;
+fh1 = figure('Units','normalized','Position',[.05 .08 .88 .85],...
+    'Color','w','MenuBar','none');
+ax1 = axes('Position',[.06 .06 .9 .9],'Color','none');
+
+n = size(ROIS,2);
+f = size(ROIS,1);
+
+R = ROIS + repmat(1:n,f,1);
+
+ph = plot(R,'LineWidth',3);
+pause(1)
+
+ROITABLE = table(ROIS);
+
+
+
+fh1 = figure('Units','pixels','Position',[10 35 1300 500],...
+    'Color','w','MenuBar','none');
+ax1 = axes('Position',[.06 .06 .9 .9],'Color','none');
+ax1.YLim = [0 1]; hold on
+
+
+
+ph = plot(ROIS,'LineWidth',5);
+pause(1)
+
+
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+BWMASK IMFO ROIS ROITABLE
+
+
+
+%########################################################################
+%%  EXPORT ROI ACTIVITY TRACES TO SPREADSHEET
+%########################################################################
+% d = char(datetime('now'));
+% d = regexprep(d,':','_');
+% d = regexprep(d,' ','_');
+% d = regexprep(d,'-','_');
+
+NIM.IMG = uint8(rescale(NIM.IMG).*255);
+NIM.SMIM = uint8(rescale(NIM.SMIM).*255);
+NIM.ABIM = uint8(rescale(NIM.ABIM).*255);
 
 
 
 
+disp('WRITING TABLE AND SAVING CSV FILE...')
+[path,name] = fileparts(PIX.info.Filename{1});
+save(['ROI_ANALYSIS_' name '.mat'],'NIM','PIX','PC','MAGE','PIC','BWMASK',...
+'IMFO','ROIS','ROITABLE');
+writetable(ROITABLE,['ROI_ANALYSIS_' name '.csv'])
+disp('DONE.')
+
+
+
+
+
+%###############################################################
+%%      HAND-CLICK TO CHOOSE ROIS TO KEEP
+%###############################################################
+
+clc; close all
+
+
+[AXE] = handpickroi(ROIS);
+
+
+disp('CHOSEN ROIs:'); disp(AXE)
+
+
+ROIL = ROIS(:,AXE);
+
+
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+BWMASK IMFO ROIS ROITABLE ROIL
+
+%########################################################################
+%%  PLOT MEAN ACTIVITY FOR ALL ROIs
+%########################################################################
+
+
+clc; close all;
+fh1 = figure('Units','normalized','Position',[.05 .08 .88 .85],...
+    'Color','w','MenuBar','none');
+ax1 = axes('Position',[.06 .06 .9 .9],'Color','none');
+
+n = size(ROIL,2);
+f = size(ROIL,1);
+
+R = ROIL + repmat(1:n,f,1);
+
+ph = plot(R,'LineWidth',3);
+pause(1)
+
+ROITABLE = table(ROIL);
+
+
+
+fh1 = figure('Units','pixels','Position',[10 35 1300 500],...
+    'Color','w','MenuBar','none');
+ax1 = axes('Position',[.06 .06 .9 .9],'Color','none');
+ax1.YLim = [0 1]; hold on
+
+
+
+ph = plot(ROIL,'LineWidth',5);
+pause(1)
+
+
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+BWMASK IMFO ROIS ROITABLE ROIL
+
+
+
+
+
+%% NUMBER EACH ROI AND SHOW IMAGE
+%{
+
+
+
+xy = reshape(cell2mat({IMFO.stats.Centroid}),2,[])';
+
+
+close all
+imagesc(IMG(:,:,1) .* BWMASK); hold on;
+scatter(xy(:,1),xy(:,2),'r')
+
+
+for i = 1:size(xy,1)
+
+    text(xy(i,1),xy(i,2),num2str(i)); hold on
+
+
+end
+
+
+
+%}
