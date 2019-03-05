@@ -8,17 +8,12 @@
 clc; close all; clear;
 
 
-
-
-
-
 P.home = pwd;
 P.home = fileparts(which('ROIZER.m'));
 if ~any(regexp(P.home,'ROIZER') > 0)
 disp('Run this code from the ROIZER home directory,')
 disp('or add latest ROIZER-master folder to your MATLAB path.')
-
-disp('DOWNLOAD THE LATEST ROIZER SOFTWARE FROM')
+disp('YOU CAN DOWNLOAD THE LATEST ROIZER SOFTWARE FROM')
 web('https://github.com/subroutines/ROIZER.git','-browser')
 return
 end
@@ -34,7 +29,7 @@ addpath(join(string(struct2cell(P)),':',1))
 %% SELECT A TIFF STACK AND GET INFO
 %###############################################################
 
-disp('SELECT STACK')
+disp('Select a TIFF image stack.')
 
 [PIX] = getIMpath();
 
@@ -52,6 +47,38 @@ clearvars -except PIX
 IMG = IMPORTimages(PIX);
 
 clearvars -except PIX IMG
+
+
+
+
+%###############################################################
+%% CROP IMAGE STACK
+%###############################################################
+
+
+clc; close all;
+disp('1. Click-and-drag a cropping rectangle on image.')
+disp('2. Right-click rectangle and then click "Crop Image".')
+
+
+
+[~, rect] = imcrop(IMG(:,:,1));
+
+
+
+CROPBOX = [ceil(rect(1:2)) floor(rect(3:4))];
+IMG = IMG(CROPBOX(2):CROPBOX(4), CROPBOX(1):CROPBOX(3), :);
+
+
+viewstack(IMG,.05)
+
+
+
+
+
+
+
+
 
 
 
@@ -112,7 +139,7 @@ clearvars -except PIX IMG BND
 
 % IM = smoothIMG(IMG);
 
-SMIM = imgaussfilt3(IMG, 2);
+SMIM = imgaussfilt3(IMG, 1.2);
 
 close all
 imagesc(SMIM(:,:,1))
@@ -418,7 +445,7 @@ axes(ax05); imagesc(mean(PCI,3));  title('CHOSEN PRINCIPAL COMPONENTS');
 axes(ax06); imagesc(mean(IMV,3));  title('STDEV OF EACH IMG PIXEL ALONG 3RD DIM');
 
 % colormap hot
-pause(2)
+pause(1)
 
 
 
@@ -458,7 +485,7 @@ axes(ax15); imagesc(mean(NIM.PCI,3));  title('CHOSEN PRINCIPAL COMPONENTS');
 axes(ax16); imagesc(mean(NIM.IMV,3));  title('STDEV OF EACH IMG PIXEL ALONG 3RD DIM');
 
 colormap hot
-pause(2)
+pause(1)
 
 
 
@@ -520,20 +547,23 @@ clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
 
 
 TARGET = questdlg('CELL BODIES OR DENDRITES?', ...
-	'TARGET CELL BODIES OR DENDRITES?','BODY', 'DENDRITES', 'BODY');
-
-
-
-% ESTABLISH FILTERING PARAMETERS
-%--------------------------------------------------------
-AREA_FILTER = [12 , 400];      % <<<<<<<<< USER SHOULD ENTER THIS <<<<<<<<<<
+	'TARGET CELL BODIES OR DENDRITES? (Currently does nothing)',...
+    'BODY', 'DENDRITES', 'BODY');
 
 
 
 
-close all; imagesc(PIC)
+
+%########################################################################
+%%              MIN / MAX PIXEL AREA FILTER
+%########################################################################
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
 
 
+
+prompt = {'MIN ROI AREA (PIXELS):','MAX ROI AREA (PIXELS):'};
+MINMAX = inputdlg(prompt,'ROI MINIMAX',[1 35],{'12','400'});
+AREA_FILTER = [str2double(MINMAX{1}) str2double(MINMAX{2})];
 
 
 
