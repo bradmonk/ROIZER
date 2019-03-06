@@ -70,7 +70,7 @@ CROPBOX = [ceil(rect(1:2)) floor(rect(3:4))];
 IMG = IMG(CROPBOX(2):CROPBOX(4), CROPBOX(1):CROPBOX(3), :);
 
 
-viewstack(IMG,.05)
+% viewstack(IMG,.05)
 
 
 
@@ -371,7 +371,7 @@ IMAX = mean(IMAX,3);
 
 
 close all; imagesc(IMAX); %colormap hot
-title('AVERAGE PIXEL VARIANCE OF RAW IMAGE STACK')
+title('AVERAGE PIXEL RANGE OF RAW IMAGE STACK')
 pause(2)
 
 
@@ -552,6 +552,12 @@ TARGET = questdlg('CELL BODIES OR DENDRITES?', ...
 
 
 
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+TARGET
+
+
+
+
 
 
 %########################################################################
@@ -566,8 +572,16 @@ MINMAX = inputdlg(prompt,'ROI MINIMAX',[1 35],{'12','400'});
 AREA_FILTER = [str2double(MINMAX{1}) str2double(MINMAX{2})];
 
 
+clearvars -except PIX IMG SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC...
+TARGET AREA_FILTER
 
 
+
+
+
+
+
+return
 %########################################################################
 %%              PERFORM IMAGE SEGMENTATION
 %########################################################################
@@ -581,7 +595,8 @@ TARGET AREA_FILTER
 % SEGMENT IMAGE
 %--------------------------------------------------------
 % [BWMASK,BWRAW] = segIM2(PIC);
-[BWMASK,BWRAW] = segIM3(PIC);
+% [BWMASK,BWRAW] = segIM3(PIC);
+[BWMASK,BWRAW] = segIM4(PIC);
 
 
 close all; p=imagesc(BWMASK); 

@@ -1,4 +1,4 @@
-function [THRESH] = imhist(IMG, PC)
+function [THRESH] = imhisto(IMG, PC)
 
 
 
