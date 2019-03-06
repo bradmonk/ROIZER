@@ -527,33 +527,26 @@ getROIstatsH = uicontrol('Parent', roisigH, 'Units', 'normalized', ...
 exportpanelH = uipanel('Title','I/O','FontSize',10,...
     'BackgroundColor',[.95 .95 .95],...
     'Position', [0.80 0.01 0.18 0.20]); % 'Visible', 'Off',
-              
+
 exportvarsH = uicontrol('Parent', exportpanelH, 'Units', 'normalized', ...
-    'Position', [0.03 0.65 0.95 0.28], 'FontSize', 13, 'String', 'Export Vars to Workspace ',...
-    'Callback', @exportvars);
+    'Position', [0.03 0.55 0.95 0.40], 'FontSize', 13,...
+    'String', 'Export vars to workspace ',...
+    'Callback', @exportROIACT2WS, 'Enable','off');
 
-savedatasetH = uicontrol('Parent', exportpanelH, 'Units', 'normalized', ...
-    'Position', [0.03 0.34 0.46 0.28], 'FontSize', 11, 'String', 'Save Data',...
-    'Callback', @savedataset);
-
-compnsaveH = uicontrol('Parent', exportpanelH, 'Units', 'normalized', ...
-    'Position', [0.52 0.34 0.46 0.28], 'FontSize', 11, 'String', 'Compress Save',...
-    'Callback', @compnsave);
-
-loadmatdataH = uicontrol('Parent', exportpanelH, 'Units', 'normalized', ...
-    'Position', [0.03 0.03 0.95 0.28], 'FontSize', 13, 'String', 'Load .mat Dataset',...
-    'Callback', @loadmatdata);
+exportfileH = uicontrol('Parent', exportpanelH, 'Units', 'normalized', ...
+    'Position', [0.03 0.03 0.95 0.40], 'FontSize', 13,...
+    'String', 'Export data to file',...
+    'Callback', @exportROIACT2FILE, 'Enable','off');
 
 
 
 % enableButtons
+% memocon('Ready!')
 
 
 pause(.1)
+ROIZERtoolbox()
 
-grinlenstoolbox()
-
-% memocon('Ready!')
 
 
 
@@ -566,7 +559,7 @@ grinlenstoolbox()
 %###############################################################
 %%   INITIAL SEG TOOLBOX FUNCTION TO POPULATE GUI
 %###############################################################
-function grinlenstoolbox(hObject, eventdata)
+function ROIZERtoolbox(hObject, eventdata)
 
     % set(initmenuh, 'Visible', 'Off');
     % set(mainguih, 'Visible', 'On');
@@ -1780,8 +1773,7 @@ end
 %%                GET ROI ACTIVITY
 %###############################################################
 function ROIACTIVITY(hObject, eventdata)
-% disableButtons; imseg1H.FontWeight = 'bold';
-% pause(.02);
+% disableButtons; imseg1H.FontWeight = 'bold'; pause(.02);
 
 
 memocon('Getting ROI activity...');
@@ -2058,9 +2050,9 @@ memocon('  (showing only three-at-a-time)')
 
 
 
-%########################################################################
+
 %%  PLOT MEAN ACTIVITY FOR ALL ROIs
-%########################################################################
+%--------------------------------------------------------
 memocon('Plotting mean activity for all ROIs')
 
     fh1 = figure('Units','normalized','Position',[.05 .08 .88 .85],...
@@ -2108,6 +2100,111 @@ end
 
 
 
+
+
+
+
+
+%########################################################################
+%%  EXPORT ROI ACTIVITY TRACES TO SPREADSHEET
+%########################################################################
+function exportROIACT2FILE(hObject, eventdata)
+% disableButtons; imseg1H.FontWeight = 'bold'; pause(.02);
+
+
+    memocon('SAVING ROI DATA TO MAT & CSV FILES...')
+
+    NIM.IMG = uint8(rescale(NIM.IMG).*255);
+    NIM.SMIM = uint8(rescale(NIM.SMIM).*255);
+    NIM.ABIM = uint8(rescale(NIM.ABIM).*255);
+
+
+    [path,name] = fileparts(PIX.info.Filename{1});
+
+
+    save(['ROI_ANALYSIS_' name '.mat'],...
+        'NIM','PIX','PC','MAGE','PIC','BWMASK',...
+        'IMFO','ROIS','ROITABLE');
+
+    writetable(ROITABLE,['ROI_ANALYSIS_' name '.csv'])
+
+
+    memocon('Files saved to...')
+    memocon(['    ROI_ANALYSIS_' name '.mat'])
+    memocon(['    ROI_ANALYSIS_' name '.csv'])
+
+
+% memocon('done.');
+% compimgH.FontWeight = 'normal';
+% pause(.02); enableButtons
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%########################################################################
+%%  EXPORT ROI ACTIVITY TRACES TO SPREADSHEET
+%########################################################################
+function exportROIACT2WS(hObject, eventdata)
+% disableButtons; imseg1H.FontWeight = 'bold'; pause(.02);
+
+
+
+    memocon('Choose which variables to export to main workspace')
+
+
+    labels = {...
+    'Save PIX      to variable named:' ...
+    'Save IMG      to variable named:' ...
+    'Save SMIM     to variable named:' ...
+    'Save PC       to variable named:' ...
+    'Save ABIM     to variable named:' ...
+    'Save PCI      to variable named:' ...
+    'Save IMAX     to variable named:' ...
+    'Save IMV      to variable named:' ...
+    'Save NIM      to variable named:' ...
+    'Save MAGE     to variable named:' ...
+    'Save PIC      to variable named:' ...
+    'Save BWMASK   to variable named:' ...
+    'Save IMFO     to variable named:' ...
+    'Save ROIS     to variable named:' ...
+    'Save ROITABLE to variable named:' ...
+    'Save ROIL     to variable named:' ...
+    }; 
+
+
+    vars = {'PIX','IMG','SMIM','PC','ABIM','PCI','IMAX','IMV','NIM','MAGE',...
+            'PIC','BWMASK','IMFO','ROIS','ROITABLE','ROIL'};
+
+
+    vals = {PIX , IMG , SMIM , PC , ABIM , PCI , IMAX , IMV , NIM , MAGE,...
+            PIC , BWMASK , IMFO , ROIS , ROITABLE , ROIL};
+
+
+    export2wsdlg(labels,vars,vals);
+
+
+
+    memocon('Selected variables exported to main workspace.')
+
+
+% memocon('done.');
+% compimgH.FontWeight = 'normal';
+% pause(.02); enableButtons
+end
 
 
 
@@ -2245,6 +2342,8 @@ end
 function enableButtons()
 
 
+    runallIPH.Enable = 'on';
+
     cropimgH.Enable    = 'on';
     smoothimgH.Enable  = 'on';
     imgpcH.Enable      = 'on';
@@ -2263,17 +2362,17 @@ function enableButtons()
     imseg6H.Enable = 'on';
     imseg7H.Enable = 'on';
 
+    exportvarsH.Enable = 'on';
+    exportfileH.Enable = 'on';
 
 
-
-    getROIstatsH.Enable = 'on';
-    plotTileStatsH.Enable = 'on';
-    runallIPH.Enable = 'on';
-    previewStackH.Enable = 'on';
-    viewGridOverlayH.Enable = 'on';
-    plotGroupMeansH.Enable = 'on';
-    viewTrialTimingsH.Enable = 'on';
-    plotGUIH.Enable = 'on';
+%     getROIstatsH.Enable = 'on';
+%     plotTileStatsH.Enable = 'on';
+%     previewStackH.Enable = 'on';
+%     viewGridOverlayH.Enable = 'on';
+%     plotGroupMeansH.Enable = 'on';
+%     viewTrialTimingsH.Enable = 'on';
+%     plotGUIH.Enable = 'on';
 
 
 end
@@ -2295,6 +2394,9 @@ function disableButtons()
     imseg5H.Enable = 'off';
     imseg6H.Enable = 'off';
     imseg7H.Enable = 'off';
+
+    exportvarsH.Enable = 'off';
+    exportfileH.Enable = 'off';
 
 
     getROIstatsH.Enable = 'off';
