@@ -1,5 +1,5 @@
 function [] = SEGMENTIZER(varargin)
-%% SEGMENTIZER.m - SEG LENS IMAGING TOOLBOX
+%% SEGMENTIZER.m - IMAGE SEGMENTATION TOOLBOX
 %{
 % 
 % Syntax
@@ -46,10 +46,7 @@ function [] = SEGMENTIZER(varargin)
 %}
 %----------------------------------------------------
 clc; close all; clear all; clear java;
-disp('WELCOME TO THE SEGMENTATION TOOLBOX')
-
-clc; close all; clear;
-
+disp('WELCOME TO THE IMAGE SEGMENTATION TOOLBOX')
 
 P.home = pwd;
 P.home = fileparts(which('ROIZER.m'));
@@ -71,25 +68,32 @@ addpath(join(string(struct2cell(P)),':',1))
 %% MANUALLY SET PER-SESSION PATH PARAMETERS IF WANTED (OPTIONAL)
 
 global IMG PIX SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
-global BWMASK IMFO ROIS ROITABLE ROIL 
+global IMBW BWMASK BWRAW IMFO ROIS ROITABLE ROIL 
 global ThreshMin ThreshMax minmaxBins pixelsdBins total_frames
+global MINMAXROIPIXELS AREA_FILTER 
 
 ThreshMin = .01;
 ThreshMax = .99;
 minmaxBins = 20;
 pixelsdBins = 20;
+MINMAXROIPIXELS = [12 400];
+AREA_FILTER = MINMAXROIPIXELS;
 
-IMG   = [];
-PIX   = [];
-SMIM  = [];
-PC    = [];
-ABIM  = [];
-PCI   = [];
-IMAX  = [];
-IMV   = [];
-NIM   = [];
-MAGE  = [];
-PIC   = [];
+
+IMG     = [];
+PIX     = [];
+SMIM    = [];
+PC      = [];
+ABIM    = [];
+PCI     = [];
+IMAX    = [];
+IMV     = [];
+NIM     = [];
+MAGE    = [];
+PIC     = [];
+BWMASK  = [];
+BWRAW   = [];
+IMBW    = [];
 
 
 
@@ -158,20 +162,8 @@ smoothSD = 1.2;
 smoothRes = .1;
 
 
-global AlignVals
-AlignVals.P1x = [];
-AlignVals.P1y = [];
-AlignVals.P2x = [];
-AlignVals.P2y = [];
-AlignVals.P3x = [];
-AlignVals.P3y = [];
-AlignVals.P4x = [];
-AlignVals.P4y = [];
-
-
  
 global muIMGS phSEG previewStacknum toggrid axGRID
-global IMGcMax IMGcMaxInd IMGcMin IMGcMinInd
 muIMGS = [];
 previewStacknum = 25;
 toggrid = 0;
@@ -185,28 +177,6 @@ confilefullpath = which(confile,'-all');
 % delete(confile)
 
 
-% -----------------------------------------------------------------
-%%     INITIATE GUI HANDLES AND CREATE SUBMENU GUI FIGURE
-% -----------------------------------------------------------------
-% INITIAL SUBMENU GUI SETUP (SEG TOOLBOX ~ MOTION CORRECTION)
-%{
-% initmenuh = figure('Units','normalized','OuterPosition',[.25 .4 .4 .2], ...
-%     'BusyAction', 'cancel','Menubar', 'none',...
-%     'Name', 'SEG analysis', 'Tag', 'SEG analysis');
-% 
-% grinlenstoolboxh = uicontrol('Parent', initmenuh, 'Units','normalized', 'Position', [.03 .05 .47 .9],...
-%     'String', 'Start SEG lens toolbox', 'FontSize', 16, 'Tag', 'Start SEG lens toolbox',...
-%     'Callback', @grinlenstoolbox);
-% 
-% motioncorrectionh = uicontrol('Parent', initmenuh, 'Units','normalized', 'Position', [.52 .51 .45 .44],...
-%     'String', 'Perform motion correction', 'FontSize', 14, 'Tag', 'Perform motion correction',...
-%     'Callback', @motioncorrection);
-% 
-% 
-% formatXLSH = uicontrol('Parent', initmenuh, 'Units','normalized', 'Position', [.52 .05 .45 .44],...
-%     'String', 'Multiformat XLS sheets', 'FontSize', 14, 'Tag', 'Multiformat XLS sheets',...
-%     'Callback', @formatXLS);
-%}
 
 
 %########################################################################
@@ -243,12 +213,9 @@ imgsliderH = uicontrol('Parent', mainguih, 'Units', 'normalized','Style','slider
 
 
 
-
-
-%----------------------------------------------------
-%           MEMO CONSOLE GUI WINDOW
-%----------------------------------------------------
-
+%########################################################################
+%%              MEMO CONSOLE GUI WINDOW
+%########################################################################
 memopanelH = uipanel('Parent', mainguih,'Title','Memo Log ','FontSize',10,...
     'BackgroundColor',[1 1 1],...
     'Position', [0.43 0.76 0.55 0.23]); % 'Visible', 'Off',
@@ -271,9 +238,9 @@ conboxH = uicontrol('Parent',memopanelH,'Style','listbox','Units','normalized',.
 
 
 
-%----------------------------------------------------
-%           IMAGE PROCESSING PANEL
-%----------------------------------------------------
+%########################################################################
+%%           IMAGE STACK PRE-PROCESSING PANEL
+%########################################################################
 IPpanelH = uipanel('Title','Image Stack Preprocessing','FontSize',10,...
     'BackgroundColor',[.95 .95 .95],...
     'Position', [0.43 0.23 0.35 0.52]); % 'Visible', 'Off',
@@ -415,48 +382,132 @@ compimgtxtH = uicontrol('Parent', IPpanelH, 'Style', 'Text', 'Units', 'normalize
 
               
 
-%----------------------------------------------------
-%           DATA GRAPHS AND FIGURES PANEL
-%----------------------------------------------------
-graphspanelH = uipanel('Title','Graphs and Figures','FontSize',10,...
+
+
+
+
+
+%########################################################################
+%%               IMAGE SEGMENTATION PANEL
+%########################################################################
+imsegpanelH = uipanel('Title','Image Segmentation','FontSize',10,...
+    'BackgroundColor',[.95 .95 .95],...
+    'Position', [0.80 0.23 0.18 0.52]); % 'Visible', 'Off',
+
+
+roiposTxt.A   = [.05  .94  .90  .05];
+roiposTxt.B1  = [.05  .90  .40  .045];
+roiposTxt.B2  = [.55  .90  .40  .045];
+roiposTxt.C1  = [.05  .84  .40  .06];
+roiposTxt.C2  = [.55  .84  .40  .06];
+
+
+% roiszH = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
+%     'Position', HposButton.D, 'FontSize', 12, 'String', 'Remove Outlier Pixels',...
+%     'Callback', @remrescale, 'Enable','off');
+
+roisztxtH = uicontrol('Parent', imsegpanelH, 'Style', 'Text', 'Units', 'normalized',...
+    'Position', roiposTxt.A, 'FontSize', 10,'String', 'ROI PIXEL COUNT THRESHOLD ');
+roiszmintxtH = uicontrol('Parent', imsegpanelH, 'Style', 'Text', 'Units', 'normalized',...
+    'Position', roiposTxt.B1, 'FontSize', 10,'String', 'Min');
+roiszmaxtxtH = uicontrol('Parent', imsegpanelH, 'Style', 'Text', 'Units', 'normalized',...
+    'Position', roiposTxt.B2, 'FontSize', 10,'String', 'Max');
+roiszminH = uicontrol('Parent', imsegpanelH, 'Style', 'Edit', 'Units', 'normalized', ...
+    'Position', roiposTxt.C1, 'FontSize', 11); 
+roiszmaxH = uicontrol('Parent', imsegpanelH, 'Style', 'Edit', 'Units', 'normalized', ...
+    'Position', roiposTxt.C2, 'FontSize', 11); 
+
+
+uicontrol('Parent', imsegpanelH, 'Style', 'Text', 'Units', 'normalized',...
+    'Position', [.05  .70  .90  .05], 'FontSize', 10,...
+    'String', 'SEGMENTATION PROCESSES');
+
+hBpos.A = [.05  .60  .90  .09];
+hBpos.B = [.05  .50  .90  .09];
+hBpos.C = [.05  .40  .90  .09];
+hBpos.D = [.05  .30  .90  .09];
+hBpos.E = [.05  .20  .90  .09];
+hBpos.F = [.05  .10  .90  .09];
+hBpos.G = [.05  .00  .90  .09];
+
+imseg1H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
+    'Position', hBpos.A, 'FontSize', 12,...
+    'String', 'Saturate ','Callback', @imsegSaturate, 'Enable','off');
+
+imseg2H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
+    'Position', hBpos.B, 'FontSize', 12,...
+    'String', 'Binarize ','Callback', @imsegBinarize, 'Enable','off');
+
+imseg3H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
+    'Position', hBpos.C, 'FontSize', 12,...
+    'String', 'Open Mask ','Callback', @imsegIMOPEN, 'Enable','off');
+
+imseg4H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
+    'Position', hBpos.D, 'FontSize', 12,...
+    'String', 'Active Contour ','Callback', @imsegACTIVECON, 'Enable','off');
+
+imseg5H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
+    'Position', hBpos.E, 'FontSize', 12,...
+    'String', 'Dilate ','Callback', @imsegDILATE, 'Enable','off');
+
+imseg6H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
+    'Position', hBpos.F, 'FontSize', 12,...
+    'String', 'Clear borders, fill holes ','Callback', @imsegCLEARFILL, 'Enable','off');
+
+imseg7H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
+    'Position', hBpos.G, 'FontSize', 12,...
+    'String', 'Get ROI activity ','Callback', @ROIACTIVITY, 'Enable','off');
+
+
+
+
+
+
+
+
+
+
+%########################################################################
+%%        POST-SEGMENTATION ROI SIGNALS PANEL
+%########################################################################
+roisigH = uipanel('Title','ROI Signals','FontSize',10,...
     'BackgroundColor',[.95 .95 .95],...
     'Position', [0.43 0.01 0.35 0.20]); % 'Visible', 'Off',
               
 
 
-
-plotTileStatsH = uicontrol('Parent', graphspanelH, 'Units', 'normalized', ...
+plotTileStatsH = uicontrol('Parent', roisigH, 'Units', 'normalized', ...
     'Position', [0.03 0.66 0.31 0.28], 'FontSize', 12, 'String', 'Plot Tile Data',...
     'Callback', @plotTileStats, 'Enable','off'); 
 
-plotGUIH = uicontrol('Parent', graphspanelH, 'Units', 'normalized', ...
+plotGUIH = uicontrol('Parent', roisigH, 'Units', 'normalized', ...
     'Position', [0.03 0.34 0.31 0.28], 'FontSize', 12, 'String', 'Open Plot GUI',...
     'Callback', @plotGUI, 'Enable','off');
 
-plotGroupMeansH = uicontrol('Parent', graphspanelH, 'Units', 'normalized', ...
+plotGroupMeansH = uicontrol('Parent', roisigH, 'Units', 'normalized', ...
     'Position', [0.03 0.03 0.31 0.28], 'FontSize', 12, 'String', 'Plot Group Means',...
     'Callback', @plotGroupMeans, 'Enable','off');
 
-viewGridOverlayH = uicontrol('Parent', graphspanelH, 'Units', 'normalized', ...
+viewGridOverlayH = uicontrol('Parent', roisigH, 'Units', 'normalized', ...
     'Position', [0.35 0.66 0.31 0.28], 'FontSize', 12, 'String', 'View Grid Overlay',...
     'Callback', @viewGridOverlay, 'Enable','off');
 
-viewTrialTimingsH = uicontrol('Parent', graphspanelH, 'Units', 'normalized', ...
+viewTrialTimingsH = uicontrol('Parent', roisigH, 'Units', 'normalized', ...
     'Position', [0.35 0.34 0.31 0.28], 'FontSize', 12, 'String', 'View Trial Timings',...
     'Callback', @viewTrialTimings, 'Enable','off');
 
-previewStackH = uicontrol('Parent', graphspanelH, 'Units', 'normalized', ...
+previewStackH = uicontrol('Parent', roisigH, 'Units', 'normalized', ...
     'Position', [0.35 0.03 0.38 0.28], 'FontSize', 12, 'String', 'Preview Image Stack',...
     'Callback', @previewStack, 'Enable','off');
-previewStacktxtH = uicontrol('Parent', graphspanelH, 'Style', 'Text', 'Units', 'normalized',...
+previewStacktxtH = uicontrol('Parent', roisigH, 'Style', 'Text', 'Units', 'normalized',...
     'Position', [0.74 0.29 0.15 0.11], 'FontSize', 10,'String', 'Frames');
-previewStacknumH = uicontrol('Parent', graphspanelH, 'Style', 'Edit', 'Units', 'normalized', ...
+previewStacknumH = uicontrol('Parent', roisigH, 'Style', 'Edit', 'Units', 'normalized', ...
     'Position', [0.74 0.07 0.15 0.20], 'FontSize', 12);
 % previewStackcbH = uicontrol('Parent', graphspanelH,'Style','checkbox','Units','normalized',...
 %     'Position', [.62 0.12 .14 .14] ,'String','Postprocessing Previews', 'Value',1);
 
 
-getROIstatsH = uicontrol('Parent', graphspanelH, 'Units', 'normalized', ...
+getROIstatsH = uicontrol('Parent', roisigH, 'Units', 'normalized', ...
     'Position', [0.67 0.45 0.31 0.50], 'FontSize', 12, 'String', 'ROI TOOLBOX',...
     'Callback', @openROITOOLBOX, 'Enable','off');
 
@@ -467,57 +518,12 @@ getROIstatsH = uicontrol('Parent', graphspanelH, 'Units', 'normalized', ...
 
 
 
-%----------------------------------------------------
-%    IMAGE SEGMENTATION PANEL
-%----------------------------------------------------
-imsegpanelH = uipanel('Title','Image Segmentation','FontSize',10,...
-    'BackgroundColor',[.95 .95 .95],...
-    'Position', [0.80 0.23 0.18 0.52]); % 'Visible', 'Off',
-
-hBpos.A = [.05  .90  .90  .09];
-hBpos.B = [.05  .80  .90  .09];
-hBpos.C = [.05  .70  .90  .09];
-hBpos.D = [.05  .60  .90  .09];
-hBpos.E = [.05  .50  .90  .09];
-hBpos.F = [.05  .40  .90  .09];
-hBpos.G = [.05  .30  .90  .09];
-
-imseg1H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
-    'Position', hBpos.A, 'FontSize', 12,...
-    'String', 'IM_SEG_1 ','Callback', @imseg1, 'Enable','off');
-
-imseg2H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
-    'Position', hBpos.B, 'FontSize', 12,...
-    'String', 'IM_SEG_2 ','Callback', @imseg2, 'Enable','off');
-
-imseg3H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
-    'Position', hBpos.C, 'FontSize', 12,...
-    'String', 'IM_SEG_3 ','Callback', @imseg3, 'Enable','off');
-
-imseg4H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
-    'Position', hBpos.D, 'FontSize', 12,...
-    'String', 'IM_SEG_4 ','Callback', @imseg4, 'Enable','off');
-
-imseg5H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
-    'Position', hBpos.E, 'FontSize', 12,...
-    'String', 'IM_SEG_5 ','Callback', @imseg5, 'Enable','off');
-
-imseg6H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
-    'Position', hBpos.F, 'FontSize', 12,...
-    'String', 'IM_SEG_6 ','Callback', @imseg6, 'Enable','off');
-
-imseg7H = uicontrol('Parent', imsegpanelH, 'Units', 'normalized', ...
-    'Position', hBpos.G, 'FontSize', 12,...
-    'String', 'IM_SEG_7 ','Callback', @imseg7, 'Enable','off');
 
 
 
-
-
-
-%----------------------------------------------------
-%    SAVE AND EXPORT DATA
-%----------------------------------------------------
+%########################################################################
+%%              SAVE AND EXPORT DATA PANEL
+%########################################################################
 exportpanelH = uipanel('Title','I/O','FontSize',10,...
     'BackgroundColor',[.95 .95 .95],...
     'Position', [0.80 0.01 0.18 0.20]); % 'Visible', 'Off',
@@ -576,8 +582,11 @@ function grinlenstoolbox(hObject, eventdata)
     set(iminimaxnumH, 'String', num2str(minmaxBins));
     set(pixelsdnumH, 'String', num2str(pixelsdBins));
     set(previewStacknumH, 'String', num2str(previewStacknum));
+
+    set(roiszminH, 'String', num2str(MINMAXROIPIXELS(1)));
+    set(roiszmaxH, 'String', num2str(MINMAXROIPIXELS(2)));
     
-    
+
     % Set radiobuttons
     % stimtypeh.SelectedObject = stimtypeh1; 
     % stimtype = stimtypeh.SelectedObject.String;
@@ -620,9 +629,15 @@ function importimgstack(hObject, eventdata)
 
     memocon('Image stack sucessfully imported.') 
     
+
+    % Adjust the contrast of the image so that 1% of the data
+    % is saturated at low and high intensities, and display it.
+    %IMJ = imadjust(mean(IMG,3));
+
+
     axes(haxSEG)
     colormap(haxSEG,parula)
-    phSEG = imagesc(IMG(:,:,1) , 'Parent', haxSEG);
+    phSEG = imagesc(mean(IMG,3) , 'Parent', haxSEG);
               pause(1)
     
     IMGraw = IMG(:,:,1);
@@ -654,9 +669,8 @@ function importimgstack(hObject, eventdata)
      % VISUALIZE AND ANNOTATE
      memocon(sprintf('Imported image stack size: % s ', num2str(size(IMG))));
      
-  IMG = IMG(:,:,1:total_frames);
 
-    update_IMGfactors()
+     update_IMGfactors()
     
     
 enableButtons
@@ -992,6 +1006,11 @@ pause(.02);
 
 
 
+    % Adjust the contrast of the image so that 1% of the data
+    % is saturated at low and high intensities, and display it.
+    %IMJ = imadjust(IMG);
+
+
     memocon('Removing outliers and rescaling image stacks...')
 
     IMG = rescale(double(IMG),0,1);
@@ -1224,12 +1243,12 @@ end
 %%      CREATE COMPOSITE IMAGE USING COMBINATION OF ABOVE
 %###############################################################
 function compimg(hObject, eventdata)
-% disableButtons; compimgH.FontWeight = 'bold';
+disableButtons; compimgH.FontWeight = 'bold';
 pause(.02);
 
 
-keyboard
 
+memocon('Creating composite image for ROI segmentation...');
 
 
 
@@ -1267,7 +1286,7 @@ axes(ax15); imagesc(mean(NIM.PCI,3));  title('CHOSEN PRINCIPAL COMPONENTS');
 axes(ax16); imagesc(mean(NIM.IMV,3));  title('STDEV OF EACH IMG PIXEL ALONG 3RD DIM');
 
 colormap hot
-pause(2); 
+pause(4); 
 close (fh02)
 
 
@@ -1287,7 +1306,6 @@ MAGE(:,:,6) = rescale(mean(NIM.IMV,3));
 MAGE(:,:,1) = rescale(MAGE(:,:,1).^2)./20;
 MAGE(:,:,2) = rescale(MAGE(:,:,2).^2)./20;
 MAGE(:,:,3) = rescale(MAGE(:,:,3).^2)./20;
-
 MAGE(:,:,4) = rescale(MAGE(:,:,4).^2);
 MAGE(:,:,5) = rescale(MAGE(:,:,5).^2);
 MAGE(:,:,6) = rescale(MAGE(:,:,6).^2);
@@ -1302,8 +1320,10 @@ PIC = rescale(mean(MAGE(:,:,[1 2 3 4 5 6]),3));
     phSEG = imagesc(PIC , 'Parent', haxSEG);
     colormap hot
 
-    memocon('DISPLAYING COMPOSITE IMG FOR SEGENTATION');
+    IMBW = PIC;
 
+    memocon('DISPLAYING COMPOSITE IMG FOR SEGENTATION');
+    clc; disp('DONE')
 
 
 compimgH.FontWeight = 'normal';
@@ -1321,7 +1341,761 @@ end
 
 
 
+%###############################################################
+%%      IMAGE_SEGMENTATION_PROCESS_1   imadjust
+%###############################################################
+function imsegSaturate(hObject, eventdata)
+% disableButtons; imseg1H.FontWeight = 'bold';
+% pause(.02);
 
+    memocon('Saturating image...');
+
+
+    
+    % Adjust the contrast of the image so that 1% of the data
+    % is saturated at low and high intensities, and display it.
+    IMBW = imadjust(PIC);
+
+
+    phSEG = imagesc(IMBW , 'Parent', haxSEG);
+    phSEG.CData=IMBW; pause(.3)
+
+
+
+
+% IMBW = imbinarize(PIC,.1);
+% IM1 = PIC;
+% IM2 = imgradient(IM1);
+% % IM3 = imbinarize(IM1,'adaptive','Sensitivity',.1);
+% IM3 = imbinarize(IM1,.1);
+% IM4 = watershed(IM3);
+% IM5 = imbinarize(IM1,graythresh(IM1));
+% 
+% IM = IM1;
+% IM(:,:,2) = IM2;
+% IM(:,:,3) = IM3;
+% IM(:,:,4) = IM4;
+% IM(:,:,5) = IM5;
+% 
+% close all;
+% montage(IM, 'Size', [2 3]);
+% 
+% % Create masked image.
+% maskedImage = PIX;
+% maskedImage(~BW) = 0;
+
+
+
+BWMASK = IMBW;
+BWRAW = PIC;
+BWRAW(~BWMASK) = 0;
+
+
+memocon('done.');
+% compimgH.FontWeight = 'normal';
+% pause(.02); enableButtons
+end
+
+
+%###############################################################
+function gaborFeatures = createGaborFeatures(im)
+
+disp('CREATING GABOR FEATURES PLEASE WAIT...')
+
+if size(im,3) == 3
+    im = prepLab(im);
+end
+
+im = im2single(im);
+
+imageSize = size(im);
+numRows = imageSize(1);
+numCols = imageSize(2);
+
+wavelengthMin = 4/sqrt(2);
+wavelengthMax = hypot(numRows,numCols);
+n = floor(log2(wavelengthMax/wavelengthMin));
+wavelength = 2.^(0:(n-2)) * wavelengthMin;
+
+deltaTheta = 45;
+orientation = 0:deltaTheta:(180-deltaTheta);
+
+g = gabor(wavelength,orientation);
+gabormag = imgaborfilt(im(:,:,1),g);
+
+for i = 1:length(g)
+    sigma = 0.5*g(i).Wavelength;
+    K = 3;
+    gabormag(:,:,i) = imgaussfilt(gabormag(:,:,i),K*sigma);
+end
+
+% Increases liklihood that neighboring pixels/subregions are segmented together
+X = 1:numCols;
+Y = 1:numRows;
+[X,Y] = meshgrid(X,Y);
+featureSet = cat(3,gabormag,X);
+featureSet = cat(3,featureSet,Y);
+featureSet = reshape(featureSet,numRows*numCols,[]);
+
+% Normalize feature set
+featureSet = featureSet - mean(featureSet);
+featureSet = featureSet ./ std(featureSet);
+
+gaborFeatures = reshape(featureSet,[numRows,numCols,size(featureSet,2)]);
+
+% Add color/intensity into feature set
+gaborFeatures = cat(3,gaborFeatures,im);
+
+
+disp('FINISHED CREATING GABOR FEATURES!')
+
+end
+%###############################################################
+
+%###############################################################
+function out = prepLab(in)
+
+% Convert L*a*b* image to range [0,1]
+out = in;
+out(:,:,1)   = in(:,:,1) / 100;  % L range is [0 100].
+out(:,:,2:3) = (in(:,:,2:3) + 100) / 200;  % a* and b* range is [-100,100].
+
+end
+%###############################################################
+
+
+
+
+
+
+%###############################################################
+%%      IMAGE_SEGMENTATION_PROCESS_2   imbinarize
+%###############################################################
+function imsegBinarize(hObject, eventdata)
+% disableButtons; imseg1H.FontWeight = 'bold';
+% pause(.02);
+
+    memocon('Creating binary image...');
+
+
+
+    IMBW = imbinarize(IMBW,.1);
+
+
+    axes(haxSEG)
+    phSEG = imagesc(IMBW , 'Parent', haxSEG);
+    phSEG.CData=IMBW; pause(.3)
+
+
+    
+    BW = IMBW;
+
+    %---------------TOO LITTLE SIGNAL
+    s = 0;
+    mu = mean(BW(:)); 
+    memocon(['Binary image mean: ' num2str(mu)]);
+    if mu < .01
+        memocon('Increasing ROI signal...');
+        for s = 0:.001:1
+
+            BW = imbinarize(PIC,.1-s);
+            phSEG.CData=BW; pause(.005)
+
+            mu = mean(BW(:));
+            if mu > .01; break; end
+        end
+    end
+    memocon(['Binary image mean: ' num2str(mu)]);
+
+    IMBW = BW;
+    phSEG = imagesc(IMBW , 'Parent', haxSEG);
+    phSEG.CData=IMBW; pause(.3)
+
+    t = .1-s;
+
+
+    %---------------TOO MUCH BACKGROUND
+    if mu > .01
+        memocon('Decreasing ROI signal...');
+        for s = .1:.001:1
+
+            BW = imbinarize(PIC,t);
+            phSEG.CData=BW; pause(.005)
+            t = t+.0002;
+
+            mu = mean(BW(:));
+            if mu < .01; break; end
+        end
+    end
+    memocon(['Binary image mean: ' num2str(mu)]);
+
+    IMBW = BW;
+    phSEG = imagesc(IMBW , 'Parent', haxSEG);
+    phSEG.CData=IMBW; pause(.3)
+
+
+
+
+BWMASK = IMBW;
+BWRAW  = PIC;
+BWRAW(~BWMASK) = 0;
+
+memocon('DONE.');
+% compimgH.FontWeight = 'normal';
+% pause(.02); enableButtons
+end
+
+
+
+
+
+
+%###############################################################
+%%      IMAGE_SEGMENTATION_PROCESS_3  imopen
+%###############################################################
+function imsegIMOPEN(hObject, eventdata)
+% disableButtons; imseg1H.FontWeight = 'bold';
+% pause(.02);
+
+
+    memocon('Opening ROIs on disk mask...');
+
+
+    IMBW = imopen(IMBW, strel('disk', 1, 4));
+
+    axes(haxSEG)
+    phSEG = imagesc(IMBW , 'Parent', haxSEG);
+    phSEG.CData=IMBW; pause(.3)
+
+
+
+
+
+BWMASK = IMBW;
+BWRAW  = PIC;
+BWRAW(~BWMASK) = 0;
+
+% memocon('done.');
+% compimgH.FontWeight = 'normal';
+% pause(.02); enableButtons
+end
+
+
+
+
+
+%###############################################################
+%%      IMAGE_SEGMENTATION_PROCESS_4   activecontour
+%###############################################################
+function imsegACTIVECON(hObject, eventdata)
+% disableButtons; imseg1H.FontWeight = 'bold';
+% pause(.02);
+
+    memocon('Active contour on textures');
+
+
+    % Active contour with texture
+    IMBW = activecontour(PIC, IMBW, 10, 'Chan-Vese');
+
+
+    axes(haxSEG)
+    phSEG = imagesc(IMBW , 'Parent', haxSEG);
+    phSEG.CData=IMBW; pause(.3)
+
+
+
+
+
+
+
+
+BWMASK = IMBW;
+BWRAW  = PIC;
+BWRAW(~BWMASK) = 0;
+
+% memocon('done.');
+% compimgH.FontWeight = 'normal';
+% pause(.02); enableButtons
+end
+
+
+
+
+
+
+%###############################################################
+%%      IMAGE_SEGMENTATION_PROCESS_4   imdilate
+%###############################################################
+function imsegDILATE(hObject, eventdata)
+% disableButtons; imseg1H.FontWeight = 'bold';
+% pause(.02);
+
+
+    memocon('Dilate ROI mask with disk...');
+
+
+    % Dilate mask with disk
+    IMBW = imdilate(IMBW, strel('disk', 1, 4));
+
+    axes(haxSEG)
+    phSEG = imagesc(IMBW , 'Parent', haxSEG);
+    phSEG.CData=IMBW; pause(.3)
+
+
+
+
+
+
+
+
+BWMASK = IMBW;
+BWRAW  = PIC;
+BWRAW(~BWMASK) = 0;
+
+% memocon('done.');
+% compimgH.FontWeight = 'normal';
+% pause(.02); enableButtons
+end
+
+
+
+
+
+%###############################################################
+%%      IMAGE_SEGMENTATION_PROCESS_4  clearfill
+%###############################################################
+function imsegCLEARFILL(hObject, eventdata)
+% disableButtons; imseg1H.FontWeight = 'bold';
+% pause(.02);
+
+
+    memocon('Clearing borders, filling holes...');
+
+
+    % Clear borders, fill holes
+    IMBW = imclearborder(IMBW);
+    IMBW = imfill(IMBW, 'holes');
+
+    axes(haxSEG)
+    phSEG = imagesc(IMBW , 'Parent', haxSEG);
+    phSEG.CData=IMBW; pause(.3)
+
+
+
+
+
+BWMASK = IMBW;
+BWRAW  = PIC;
+BWRAW(~BWMASK) = 0;
+
+% memocon('done.');
+% compimgH.FontWeight = 'normal';
+% pause(.02); enableButtons
+end
+
+
+
+
+%###############################################################
+%%      IMAGE_SEGMENTATION_PROCESS_4  imerode
+%###############################################################
+function imsegERODE(hObject, eventdata)
+% disableButtons; imseg1H.FontWeight = 'bold';
+% pause(.02);
+
+
+
+    memocon('Eroding ROI...');
+
+    
+
+    SE = strel('disk',3,6);
+
+    %SE = strel('diamond',2);
+
+    % SE = strel('line',10,50);
+    % SE = offsetstrel('ball',5,5);
+    % SE = strel('diamond',r)
+    % SE = strel('disk',r,n)
+    % SE = strel('line',len,deg)
+    % SE = strel('octagon',r)
+    % SE = strel('rectangle',mn)
+    % SE = strel('square',w)
+    % SE = strel('cube',w)
+    % SE = strel('cuboid',xyz)
+    % SE = strel('sphere',r)
+    % SE = strel('arbitrary',nhood)
+
+
+    IMBW = imerode(IMBW, SE);
+
+    axes(haxSEG)
+    phSEG = imagesc(IMBW , 'Parent', haxSEG);
+    phSEG.CData=IMBW; pause(.3)
+
+
+
+
+
+BWMASK = IMBW;
+BWRAW  = PIC;
+BWRAW(~BWMASK) = 0;
+
+% memocon('done.');
+% compimgH.FontWeight = 'normal';
+% pause(.02); enableButtons
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%###############################################################
+%%                GET ROI ACTIVITY
+%###############################################################
+function ROIACTIVITY(hObject, eventdata)
+% disableButtons; imseg1H.FontWeight = 'bold';
+% pause(.02);
+
+
+memocon('Getting ROI activity...');
+
+
+BWMASK = IMBW;
+BWRAW  = PIC;
+BWRAW(~BWMASK) = 0;
+
+
+% GET REGION PROPERTIES & STATISTICS
+%--------------------------------------------------------
+
+IMFO.stats = regionprops(BWMASK);
+
+[IMFO.bi,IMFO.labs,IMFO.n,IMFO.a] = bwboundaries(BWMASK,'noholes');
+
+
+
+
+
+
+
+
+% PLOT BOUNDING COORDINATES AROUND ROIs
+%--------------------------------------------------------
+    axes(haxSEG)
+    phSEG = imagesc(BWMASK , 'Parent', haxSEG);
+    phSEG.CData=BWMASK; colormap bone; hold on; pause(.3)
+
+    for i = 1:numel(IMFO.stats)
+        scatter(IMFO.bi{i}(:,2),IMFO.bi{i}(:,1),'.')
+        hold on
+    end
+
+    pause(3)
+    delete(findobj(haxSEG,'Type','Scatter'))
+
+
+
+
+
+
+% PULL OUT SOME STATS SO WE CAN DETERMINE IF ANYTHING
+% NEEDS TO BE REMOVED OR RESHAPED
+%--------------------------------------------------------
+    Area = [IMFO.stats.Area]';
+
+    c=[IMFO.stats.Centroid]; 
+    cx = c(1:2:end);
+    cy = c(2:2:end);
+    Centroid = [cx',cy'];
+
+    b = [IMFO.stats.BoundingBox];
+    br = b(1:4:end);
+    bc = b(2:4:end);
+    bw = b(3:4:end);
+    bh = b(4:4:end);
+    BBox = [bw',bh' (bw./bh)' (bh./bw)'];
+
+
+
+
+% DETERMINE IF MORPHOLOGY STATS MEET FILTER CRITERIA
+%--------------------------------------------------------
+
+    TOO.SMALL = AREA_FILTER(1) > Area;
+
+    TOO.BIG   = AREA_FILTER(2) < Area;
+
+    FAIL = TOO.SMALL | TOO.BIG;
+    F = find(FAIL);
+
+
+    nROIs = numel(Area);   
+    memocon(['Total ROI count (first-pass): ' num2str(nROIs)])
+
+
+    nSmall = sum(TOO.SMALL);
+    memocon(['Number of ROIs below size threshold: ' num2str(nSmall)])
+
+    nBig   = sum(TOO.BIG);
+    memocon(['Number of ROIs above size threshold: ' num2str(nBig)])
+
+    pause(1)
+
+
+
+
+% REMOVE ROIS THAT DID NOT PASS ALL THRESH TESTS
+%--------------------------------------------------------
+memocon('Removing ROIs that did not pass thresholds')
+
+    BW = IMFO.labs;
+    for i = 1:numel(F)
+        BW(BW == F(i)) = 0;
+    end
+
+    BWMASK = BW > 0;
+
+
+
+
+
+% AGAIN GET REGION PROPERTIES & STATISTICS
+%--------------------------------------------------------
+memocon('Getting region properties & statistics')
+
+IMFO.stats = regionprops(BWMASK);
+
+[IMFO.bi,IMFO.labs,IMFO.n,IMFO.a] = bwboundaries(BWMASK,'noholes');
+
+
+
+
+
+% AGAIN PLOT BOUNDING COORDINATES AROUND ROIs
+%--------------------------------------------------------
+memocon('Plotting boarders for ROIs that passed thresholds')
+
+    axes(haxSEG)
+    phSEG = imagesc(BWMASK , 'Parent', haxSEG);
+    phSEG.CData=BWMASK; colormap bone; hold on; pause(.3)
+
+    for i = 1:numel(IMFO.stats)
+        scatter(IMFO.bi{i}(:,2),IMFO.bi{i}(:,1),'.')
+        hold on
+    end
+
+    pause(3)
+    delete(findobj(haxSEG,'Type','Scatter'))
+
+
+
+
+%% SHOW ROI ACTIVITY AND GET MEAN ACTIVITY IN EACH ROI
+%---------------------------------------------
+memocon('Suppressing background; showing ROI activity')
+
+    I = rescale(IMG) .* BWMASK;
+
+    previewFullStack(I)
+
+
+
+
+%% GET MEAN ACTIVITY IN EACH ROI
+%--------------------------------------------------------
+memocon('Computing mean activity in each ROI')
+
+
+    IM = rescale(IMG);
+    MUJ=[];
+    for i = 1:IMFO.n
+
+        msk = IMFO.labs==i;
+
+        for j = 1:size(IM,3)
+
+            IMJ = IM(:,:,j);
+
+            MUJ(i,j) = mean(IMJ(msk));
+        end
+    end
+
+    ROIS = MUJ';
+
+    minROI = min(ROIS);
+
+    ROIS = ROIS - minROI;
+
+    ROIS = rescale(ROIS);
+
+
+
+
+
+%% DETERMINE IF ACTIVITY IS SIMPLY RUNUP OR RUNDOWN
+%--------------------------------------------------------
+memocon('Determining if activity is due to linear trend')
+
+    nbins = 9;
+
+    t = round(linspace(1,size(ROIS,2),nbins));
+
+    StartMu = mean(  ROIS( t(2):t(3)         ,:)  );
+    EndMu   = mean(  ROIS( t(end-3):t(end-2) ,:)  );
+
+    IRUN = StartMu - EndMu;
+    IRUNmu = mean(IRUN);
+    IRUNsd = std(IRUN);
+
+    RAN = (IRUN > (IRUNsd*2 + IRUNmu)) | (IRUN < (IRUNsd*-2 + IRUNmu));
+
+
+
+
+%% AGAIN REMOVE ROIS THAT DID NOT PASS ALL THRESH TESTS
+%--------------------------------------------------------
+memocon('Removing ROIs selected only based on linear trend')
+
+    ROIS(:,RAN) = [];
+
+    F = find(RAN);
+
+    BW = IMFO.labs;
+    for i = 1:numel(F)
+        BW(BW == F(i)) = 0;
+    end
+
+    BWMASK = BW > 0;
+
+    IMFO.stats = regionprops(BWMASK);
+    [IMFO.bi,IMFO.labs,IMFO.n,IMFO.a] = bwboundaries(BWMASK,'noholes');
+
+
+
+% AGAIN PLOT BOUNDING COORDINATES AROUND ROIs
+%--------------------------------------------------------
+    axes(haxSEG)
+    phSEG = imagesc(BWMASK , 'Parent', haxSEG);
+    phSEG.CData=BWMASK; colormap bone; hold on; pause(.3)
+
+    for i = 1:numel(IMFO.stats)
+        scatter(IMFO.bi{i}(:,2),IMFO.bi{i}(:,1),'.')
+        hold on
+    end
+
+    pause(3)
+    delete(findobj(haxSEG,'Type','Scatter'))
+
+
+
+
+%% SHOW ROI ACTIVITY AND GET MEAN ACTIVITY IN EACH ROI
+%---------------------------------------------
+
+    I = rescale(IMG) .* BWMASK;
+
+    previewFullStack(I)
+
+
+
+
+
+
+
+
+%%  PLOT MEAN ACTIVITY IN EACH ROI
+%--------------------------------------------------------
+memocon('Plotting mean activity in each ROI')
+memocon('  (showing only three-at-a-time)')
+
+    fh1 = figure('Units','pixels','Position',[10 35 1300 500],...
+        'Color','w','MenuBar','none');
+    ax1 = axes('Position',[.06 .06 .9 .9],'Color','none');
+    ax1.YLim = [0 1]; hold on
+
+    ph = plot(ROIS(:,1:3),'k','LineWidth',3);
+    pause(1)
+
+    for i = 4:size(ROIS,2)
+
+        ph(1).YData = ph(2).YData;
+        ph(2).YData = ph(3).YData;
+        ph(3).YData = ROIS(:,i);
+        ax1.YLim = [0 1];
+        pause(.6)
+
+    end
+    pause(1)
+    close(fh1)
+
+
+
+
+%########################################################################
+%%  PLOT MEAN ACTIVITY FOR ALL ROIs
+%########################################################################
+memocon('Plotting mean activity for all ROIs')
+
+    fh1 = figure('Units','normalized','Position',[.05 .08 .88 .85],...
+        'Color','w','MenuBar','none');
+    ax1 = axes('Position',[.06 .06 .9 .9],'Color','none');
+
+    n = size(ROIS,2);
+    f = size(ROIS,1);
+
+    R = ROIS + repmat(1:n,f,1);
+
+    ph = plot(R,'LineWidth',3);
+    pause(1)
+
+    ROITABLE = table(ROIS);
+
+
+
+    fh2 = figure('Units','pixels','Position',[10 35 1300 500],...
+        'Color','w','MenuBar','none');
+    ax2 = axes('Position',[.06 .06 .9 .9],'Color','none');
+    ax2.YLim = [0 1]; hold on
+
+
+    ph = plot(ROIS,'LineWidth',5);
+    pause(1)
+
+    
+
+
+
+% memocon('done.');
+% compimgH.FontWeight = 'normal';
+% pause(.02); enableButtons
+end
 
 
 
@@ -2805,6 +3579,32 @@ disableButtons; pause(.02);
 
 enableButtons        
 end
+
+
+
+
+
+%###############################################################
+%        PREVIEW FULL IMAGE STACK
+%###############################################################
+function previewFullStack(IMGi)
+disableButtons; pause(.02);
+
+
+    axes(haxSEG)
+    phSEG = imagesc(IMGi(:,:,1),'Parent',haxSEG,'CDataMapping','scaled');
+    haxSEG.CLim = [quantile(IMGi(:),.002) quantile(IMGi(:),.998)];
+
+    for nn = 1:size(IMGi,3)
+        phSEG.CData = IMGi(:,:,nn);
+        pause(10/size(IMGi,3))
+    end
+        
+
+enableButtons        
+end
+
+
 
 
 
