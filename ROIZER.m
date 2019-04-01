@@ -701,13 +701,20 @@ pause(.02);
     I = uint8(rescale(mean(double(IMG),3)).*255);
     I = imadjust(I,stretchlim(I,[ThreshMin ThreshMax]));
 
+
     [~, rect] = imcrop(I);
+
+% rect specifies the size and position of the crop rectangle 
+% as [xmin ymin width height], in terms of spatial coordinates.
 
 
     CROPBOX = [ceil(rect(1:2)) floor(rect(3:4))];
-    IMG = IMG(CROPBOX(2):CROPBOX(4), CROPBOX(1):CROPBOX(3), :);
-        
-        
+
+    IMG = IMG(CROPBOX(2):(CROPBOX(2)+CROPBOX(4)),...
+          CROPBOX(1):(CROPBOX(1)+CROPBOX(3)) , :);
+
+
+
     previewStack
 
         
@@ -3629,6 +3636,7 @@ disableButtons; pause(.02);
     else
         I = IMG;
     end
+
 
 
     totframes = size(I,3);
