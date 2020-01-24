@@ -27,6 +27,7 @@ global IMG PIX SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
 global IMBW BWMASK BWRAW IMFO ROIS ROITABLE ROIL 
 global ThreshMin ThreshMax minmaxBins pixelsdBins total_frames
 global MINMAXROIPIXELS AREA_FILTER 
+global allhax PCASexp
 
 ThreshMin = .01;
 ThreshMax = .99;
