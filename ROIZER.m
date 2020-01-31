@@ -1,11 +1,8 @@
 function [] = ROIZER(varargin)
 %% ROIZER.m - IMAGE SEGMENTATION TOOLBOX
-
 clc; close all; clear all; clear java;
 disp('WELCOME TO THE IMAGE SEGMENTATION ROI TOOLBOX')
-
-P.home = pwd;
-P.home = fileparts(which('ROIZER.m'));
+global P; P.home = pwd; P.home = fileparts(which('ROIZER.m'));
 if ~any(regexp(P.home,'ROIZER') > 0)
 disp('Run this code from the ROIZER home directory,')
 disp('or add latest ROIZER-master folder to your MATLAB path.')
@@ -13,14 +10,24 @@ disp('YOU CAN DOWNLOAD THE LATEST ROIZER SOFTWARE FROM')
 web('https://github.com/subroutines/ROIZER.git','-browser')
 return
 end
-cd(P.home)
-P.data  = [P.home filesep 'functions'];
-addpath(join(string(struct2cell(P)),':',1))
-    
+cd(P.home); clc; rng('shuffle'); f = filesep;
+P.fun  = [P.home f '_ROIZER_functions'];
+P.dat  = [P.home f '_ROIZER_datasets'];
+P.out  = [P.home f '_ROIZER_output'];
+addpath(join(string(struct2cell(P)),pathsep,1))
+cd(P.home); clearvars -except P; P.f = filesep;
+
+
+P.egimg  = [P.dat  P.f '_ROIZER_example_data'];
+P.egout  = [P.out  P.f '_ROIZER_example_output'];
 
 
 
-    
+
+
+
+
+
 %% MANUALLY SET PER-SESSION PATH PARAMETERS IF WANTED (OPTIONAL)
 
 global IMG PIX SMIM PC ABIM PCI IMAX IMV NIM MAGE PIC
@@ -699,7 +706,7 @@ pause(.02);
     memocon(' ');
     
 
-    I = uint8(rescale(mean(double(IMG),3)).*255);
+    I = uint8(rescale(mean(double(IMG),3),0,1).*255);
     I = imadjust(I,stretchlim(I,[ThreshMin ThreshMax]));
 
 
@@ -1216,12 +1223,12 @@ memocon('Creating composite image for ROI segmentation...');
 
 
 
-NIM.IMG  = rescale(IMG);
-NIM.SMIM = rescale(SMIM);
-NIM.IMAX = rescale(IMAX);
-NIM.ABIM = rescale(ABIM);
-NIM.PCI  = rescale(PCI);
-NIM.IMV  = rescale(IMV);
+NIM.IMG  = rescale(IMG,0,1);
+NIM.SMIM = rescale(SMIM,0,1);
+NIM.IMAX = rescale(IMAX,0,1);
+NIM.ABIM = rescale(ABIM,0,1);
+NIM.PCI  = rescale(PCI,0,1);
+NIM.IMV  = rescale(IMV,0,1);
 
 
 disp('IMG');  imstats(NIM.IMG);     % RAW IMAGE STACK
@@ -1258,24 +1265,24 @@ close (fh02)
 
 
 MAGE = NIM.IMG(:,:,1);
-MAGE(:,:,1) = rescale(mean(NIM.IMG,3));
-MAGE(:,:,2) = rescale(mean(NIM.SMIM,3));
-MAGE(:,:,3) = rescale(mean(NIM.IMAX,3));
-MAGE(:,:,4) = rescale(mean(NIM.ABIM,3));
-MAGE(:,:,5) = rescale(mean(NIM.PCI,3));
-MAGE(:,:,6) = rescale(mean(NIM.IMV,3));
+MAGE(:,:,1) = rescale(mean(NIM.IMG,3),0,1);
+MAGE(:,:,2) = rescale(mean(NIM.SMIM,3),0,1);
+MAGE(:,:,3) = rescale(mean(NIM.IMAX,3),0,1);
+MAGE(:,:,4) = rescale(mean(NIM.ABIM,3),0,1);
+MAGE(:,:,5) = rescale(mean(NIM.PCI,3),0,1);
+MAGE(:,:,6) = rescale(mean(NIM.IMV,3),0,1);
 
 
 
-MAGE(:,:,1) = rescale(MAGE(:,:,1).^2)./20;
-MAGE(:,:,2) = rescale(MAGE(:,:,2).^2)./20;
-MAGE(:,:,3) = rescale(MAGE(:,:,3).^2)./20;
-MAGE(:,:,4) = rescale(MAGE(:,:,4).^2);
-MAGE(:,:,5) = rescale(MAGE(:,:,5).^2);
-MAGE(:,:,6) = rescale(MAGE(:,:,6).^2);
+MAGE(:,:,1) = rescale(MAGE(:,:,1).^2,0,1)./20;
+MAGE(:,:,2) = rescale(MAGE(:,:,2).^2,0,1)./20;
+MAGE(:,:,3) = rescale(MAGE(:,:,3).^2,0,1)./20;
+MAGE(:,:,4) = rescale(MAGE(:,:,4).^2,0,1);
+MAGE(:,:,5) = rescale(MAGE(:,:,5).^2,0,1);
+MAGE(:,:,6) = rescale(MAGE(:,:,6).^2,0,1);
 
 
-PIC = rescale(mean(MAGE(:,:,[1 2 3 4 5 5 5 6]),3));
+PIC = rescale(mean(MAGE(:,:,[1 2 3 4 5 5 5 6]),3),0,1);
 
 
 
@@ -1884,7 +1891,7 @@ memocon('Plotting boarders for ROIs that passed thresholds')
 %---------------------------------------------
 memocon('Suppressing background; showing ROI activity')
 
-    I = rescale(IMG) .* BWMASK;
+    I = rescale(IMG,0,1) .* BWMASK;
 
     previewFullStack(I)
 
@@ -1896,7 +1903,7 @@ memocon('Suppressing background; showing ROI activity')
 memocon('Computing mean activity in each ROI')
 
 
-    IM = rescale(IMG);
+    IM = rescale(IMG,0,1);
     MUJ=[];
     for i = 1:IMFO.n
 
@@ -1916,7 +1923,7 @@ memocon('Computing mean activity in each ROI')
 
     ROIS = ROIS - minROI;
 
-    ROIS = rescale(ROIS);
+    ROIS = rescale(ROIS,0,1);
 
 
 
@@ -1982,7 +1989,7 @@ memocon('Removing ROIs selected only based on linear trend')
 %% SHOW ROI ACTIVITY AND GET MEAN ACTIVITY IN EACH ROI
 %---------------------------------------------
 
-    I = rescale(IMG) .* BWMASK;
+    I = rescale(IMG,0,1) .* BWMASK;
 
     previewFullStack(I)
 
@@ -2085,9 +2092,9 @@ function exportROIACT2FILE(hObject, eventdata)
 
     memocon('SAVING ROI DATA TO MAT & CSV FILES...')
 
-    NIM.IMG = uint8(rescale(NIM.IMG).*255);
-    NIM.SMIM = uint8(rescale(NIM.SMIM).*255);
-    NIM.ABIM = uint8(rescale(NIM.ABIM).*255);
+    NIM.IMG = uint8(rescale(NIM.IMG,0,1).*255);
+    NIM.SMIM = uint8(rescale(NIM.SMIM,0,1).*255);
+    NIM.ABIM = uint8(rescale(NIM.ABIM,0,1).*255);
 
 
     [path,name] = fileparts(PIX.info.Filename{1});
